@@ -20,8 +20,8 @@ const App: React.FC = () => {
         keepIt: true,
         values: [
           {
-            title: 'Yes',
-            value: 'yes',
+            title: 'no',
+            value: 'yesno',
           },
           {
             title: 'Yes, let me show you with a picture!',

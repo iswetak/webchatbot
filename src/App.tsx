@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { GiftedChat, IMessage, User, Reply } from 'react-native-gifted-chat'
-import { View, Dimensions } from 'react-native'
+import { GiftedChat, IMessage, User,  Reply, MessageText } from 'react-native-gifted-chat'
+
+import { View, Dimensions,  } from 'react-native'
+import { Image } from 'react-native'
+// import {}
 import './App.css'
+// import {WebView} from 'react-native-w'
+import htmlToImage from 'html-to-image';
 
 
 export interface RoboMessage extends ChatMessage{
@@ -67,17 +72,62 @@ const App: React.FC = () => {
         .then(res => {
           //console.log(res)
           let newMsg: IMessage[] =[];
+         
+          let promises : Promise<any>[] = []
           for (var i = 0, len = res.length; i < len; i++) {
             let json = JSON.parse(res[i])
-            var received : IMessage = {_id:latestID++,text:json.longMessage!=null?json.longMessage:json.displayText  ,user:{_id:json.sender==="ROBO"?2:1,name:json.sender,avatar: json.sender==="ROBO"?'/me.jpg':''}, createdAt: new Date()}
-            console.log("pushing",received)
-            newMsg.push(received);
+            if(json.cardItems && json.cardItems.length>0){
+              
+              let frag =new DOMParser().parseFromString(json.cardItems[0].html,"text/html");
+              const promise3 = new Promise(function(resolve, reject) {
+                htmlToImage.toSvgDataURL(frag.documentElement,{height:250,width:250})
+                .then(function (dataUrl) {
+                  var received : IMessage = {_id:latestID++,text:json.longMessage!=null?json.longMessage:json.displayText  ,user:{_id:json.sender==="ROBO"?2:1,name:json.sender,avatar: json.sender==="ROBO"?'/me.jpg':''}, createdAt: new Date()}
+              
+                  console.log("Image created",dataUrl)
+                 
+                  received.image = dataUrl
+                 
+                 // received.text = "Hello world";
+                 
+              
+                 console.log("pushing",received._id,json.cardItems)
+                
+                 resolve(received)
+                })
+                .catch(function (error) {
+                  console.error('oops, something went wrong!', error);
+                });
+              });
+
+              
+              promises.push(promise3)
+
+            }else{
+              var received : IMessage = {_id:latestID++,text:json.longMessage!=null?json.longMessage:json.displayText  ,user:{_id:json.sender==="ROBO"?2:1,name:json.sender,avatar: json.sender==="ROBO"?'/me.jpg':''}, createdAt: new Date()}
+            
+              
+             // console.log("pushing",received._id,json.cardItems)
+             const promise3 = new Promise(function(resolve, reject) {
+             resolve(received)
+            });
+            promises.push(promise3)
+            }
+          
            
             
             }
 
+            Promise.all(promises).then(function(values) {
+              for (var i = 0, len = values.length; i < len; i++) {
+                //console.log("repaed valus:",values[i])
+              newMsg.push(values[i]);
+              }
+            
+              setMessages([...messages, ...newMsg])
+            });
 
-            setMessages([...messages, ...newMsg])
+            
          
         })
         .catch(error => {
@@ -98,7 +148,7 @@ const App: React.FC = () => {
   ])
 
   const [replyToQuickReply, setQuickReplies] = useState<Map<any,QuickReplyElement>>(new Map<any,QuickReplyElement>())
-
+  
  const onQuickReply = (replies : Reply[])=>{
 
   replies.forEach(element => {
@@ -125,10 +175,10 @@ const App: React.FC = () => {
           res => res.json())
         .then(res => {
           
+          
           let roboMessage : RoboMessage = res
           console.log("received resposne",roboMessage)
           var received : IMessage = {_id:messages.length+2,text:roboMessage.longMessage!,user:{_id:2,name:"sweta",   avatar: '/me.jpg'}, createdAt: new Date()}
-            
           if(roboMessage.quickReplies!=null){
             var replies : Reply[] = [];
             let replyToQuickReply1 : Map<any,QuickReplyElement> = new Map<any,QuickReplyElement>();
@@ -142,8 +192,25 @@ const App: React.FC = () => {
             received.quickReplies = {type:"radio",values:replies,keepIt:false}
           setQuickReplies(replyToQuickReply1)
           }
-          newMsg.push(received)
-          setMessages([...messages, ...newMsg])
+
+          if(roboMessage.cardItems && roboMessage.cardItems!.length>0){
+            let frag =new DOMParser().parseFromString(roboMessage.cardItems[0].html!,"text/html");
+            htmlToImage.toSvgDataURL(frag.documentElement,{height:250,width:250})
+            .then(function (dataUrl) {
+              console.log("Image created",dataUrl)
+              received.image = dataUrl
+             newMsg.push(received)
+             setMessages([...messages, ...newMsg])
+            })
+            .catch(function (error) {
+              console.error('oops, something went wrong!', error);
+            });
+          }else{
+            newMsg.push(received)
+            setMessages([...messages, ...newMsg])
+          }
+         
+          
           
          
         })
@@ -209,8 +276,30 @@ const App: React.FC = () => {
     
   }
 
+  
+  
+ const renderMessageImage= (props :any) => {
+  if(props.currentMessage.image){
+    
+    let sourceURl : string = props.currentMessage.image
+    console.log("image url :",sourceURl)
+    return (
+      <View>
+        {/* <webview></webview> */}
+        <Image  source={{uri : sourceURl}} style={{height: 250,width:250}} 
 
- 
+        />
+     
+        
+      </View>
+    );
+  }
+    
+   
+  
+
+  }
+  
   const user: User = { _id: 1, name: 'me' }
   const inverted = false
   
@@ -220,7 +309,7 @@ const App: React.FC = () => {
   return (
     <View style={{ height, width, backgroundColor: 'light', paddingVertical:20 }}>
       <View style={{ marginHorizontal:50,paddingTop:10, height: 500, width:400, borderLeftWidth:1,borderTopWidth:1,borderBottomWidth:1,borderRightWidth:1 ,borderColor: 'gray', borderStyle: 'solid',}}>
-      <GiftedChat {...{ replyToQuickReply, messages, onSend,onQuickReply, user, inverted }} />
+      <GiftedChat {...{ replyToQuickReply, renderMessageImage,messages, onSend,onQuickReply, user, inverted }} />
     </View>
     </View>
   )

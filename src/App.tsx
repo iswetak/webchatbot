@@ -57,6 +57,7 @@ const App: React.FC = () => {
    
       {
          method: 'GET',
+        //  credentials: 'include', 
          
          
            headers: 
@@ -308,7 +309,7 @@ const App: React.FC = () => {
   const { width, height } = Dimensions.get('window')
   return (
     <View style={{ height, width, backgroundColor: 'light', paddingVertical:20 }}>
-      <View style={{ marginHorizontal:50,paddingTop:10, height: 500, width:400, borderLeftWidth:1,borderTopWidth:1,borderBottomWidth:1,borderRightWidth:1 ,borderColor: 'gray', borderStyle: 'solid',}}>
+      <View style={{ marginHorizontal:50,paddingTop:10, height: 600, width:450, borderLeftWidth:1,borderTopWidth:1,borderBottomWidth:1,borderRightWidth:1 ,borderColor: 'gray', borderStyle: 'solid',}}>
       <GiftedChat {...{ replyToQuickReply, renderMessageImage,messages, onSend,onQuickReply, user, inverted }} />
     </View>
     </View>
